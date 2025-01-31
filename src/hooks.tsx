@@ -1,15 +1,18 @@
-import React from 'react';
+import { createSignal, onCleanup, onMount } from 'solid-js';
 
 export const useIsDocumentHidden = () => {
-  const [isDocumentHidden, setIsDocumentHidden] = React.useState(document.hidden);
+  const [isDocumentHidden, setIsDocumentHidden] = createSignal(document.hidden);
 
-  React.useEffect(() => {
+  onMount(() => {
     const callback = () => {
       setIsDocumentHidden(document.hidden);
     };
     document.addEventListener('visibilitychange', callback);
-    return () => window.removeEventListener('visibilitychange', callback);
-  }, []);
+
+    onCleanup(() => {
+      document.removeEventListener('visibilitychange', callback);
+    });
+  });
 
   return isDocumentHidden;
 };
