@@ -1,3 +1,4 @@
+import { JSX } from 'solid-js';
 import type {
   ExternalToast,
   PromiseData,
@@ -8,15 +9,13 @@ import type {
   ToastTypes,
 } from './types';
 
-import React from 'react';
-
 let toastsCounter = 1;
 
-type titleT = (() => React.ReactNode) | React.ReactNode;
+type titleT = JSX.Element;
 
 class Observer {
-  subscribers: Array<(toast: ExternalToast | ToastToDismiss) => void>;
-  toasts: Array<ToastT | ToastToDismiss>;
+  subscribers: ((toast: ToastT | ToastToDismiss) => void)[];
+  toasts: (ToastT | ToastToDismiss)[];
   dismissedToasts: Set<string | number>;
 
   constructor() {
@@ -36,7 +35,9 @@ class Observer {
   };
 
   publish = (data: ToastT) => {
-    this.subscribers.forEach((subscriber) => subscriber(data));
+    this.subscribers.forEach((subscriber) => {
+      subscriber(data);
+    });
   };
 
   addToast = (data: ToastT) => {
@@ -49,15 +50,15 @@ class Observer {
       message?: titleT;
       type?: ToastTypes;
       promise?: PromiseT;
-      jsx?: React.ReactElement;
+      jsx?: JSX.Element;
     },
   ) => {
     const { message, ...rest } = data;
-    const id = typeof data?.id === 'number' || data.id?.length > 0 ? data.id : toastsCounter++;
+    const id = typeof data.id === 'number' || (data.id && data.id.length > 0) ? data.id : toastsCounter++;
     const alreadyExists = this.toasts.find((toast) => {
       return toast.id === id;
     });
-    const dismissible = data.dismissible === undefined ? true : data.dismissible;
+    const dismissible = !!data.dismissible;
 
     if (this.dismissedToasts.has(id)) {
       this.dismissedToasts.delete(id);
@@ -85,40 +86,46 @@ class Observer {
     return id;
   };
 
-  dismiss = (id?: number | string) => {
+  dismiss = (id: number | string) => {
     if (id) {
       this.dismissedToasts.add(id);
-      requestAnimationFrame(() => this.subscribers.forEach((subscriber) => subscriber({ id, dismiss: true })));
+      requestAnimationFrame(() => {
+        this.subscribers.forEach((subscriber) => {
+          subscriber({ id, dismiss: true });
+        });
+      });
     } else {
       this.toasts.forEach((toast) => {
-        this.subscribers.forEach((subscriber) => subscriber({ id: toast.id, dismiss: true }));
+        this.subscribers.forEach((subscriber) => {
+          subscriber({ id: toast.id, dismiss: true });
+        });
       });
     }
 
     return id;
   };
 
-  message = (message: titleT | React.ReactNode, data?: ExternalToast) => {
+  message = (message: titleT, data?: ExternalToast) => {
     return this.create({ ...data, message });
   };
 
-  error = (message: titleT | React.ReactNode, data?: ExternalToast) => {
+  error = (message: titleT, data?: ExternalToast) => {
     return this.create({ ...data, message, type: 'error' });
   };
 
-  success = (message: titleT | React.ReactNode, data?: ExternalToast) => {
+  success = (message: titleT, data?: ExternalToast) => {
     return this.create({ ...data, type: 'success', message });
   };
 
-  info = (message: titleT | React.ReactNode, data?: ExternalToast) => {
+  info = (message: titleT, data?: ExternalToast) => {
     return this.create({ ...data, type: 'info', message });
   };
 
-  warning = (message: titleT | React.ReactNode, data?: ExternalToast) => {
+  warning = (message: titleT, data?: ExternalToast) => {
     return this.create({ ...data, type: 'warning', message });
   };
 
-  loading = (message: titleT | React.ReactNode, data?: ExternalToast) => {
+  loading = (message: titleT, data?: ExternalToast) => {
     return this.create({ ...data, type: 'loading', message });
   };
 
@@ -128,16 +135,15 @@ class Observer {
       return;
     }
 
-    let id: string | number | undefined = undefined;
-    if (data.loading !== undefined) {
-      id = this.create({
-        ...data,
-        promise,
-        type: 'loading',
-        message: data.loading,
-        description: typeof data.description !== 'function' ? data.description : undefined,
-      });
-    }
+    let id = data.loading
+      ? this.create({
+          ...data,
+          promise,
+          type: 'loading',
+          message: data.loading,
+          description: typeof data.description !== 'function' ? data.description : undefined,
+        })
+      : undefined;
 
     const p = Promise.resolve(promise instanceof Function ? promise() : promise);
 
@@ -147,8 +153,7 @@ class Observer {
     const originalPromise = p
       .then(async (response) => {
         result = ['resolve', response];
-        const isReactElementResponse = React.isValidElement(response);
-        if (isReactElementResponse) {
+        if (isJSXElement(response)) {
           shouldDismiss = false;
           this.create({ id, type: 'default', message: response });
         } else if (isHttpResponse(response) && !response.ok) {
@@ -162,11 +167,9 @@ class Observer {
               ? await data.description(`HTTP error! status: ${response.status}`)
               : data.description;
 
-          const isExtendedResult = typeof promiseData === 'object' && !React.isValidElement(promiseData);
+          const isExtendedResult = typeof promiseData === 'object' && !isJSXElement(promiseData);
 
-          const toastSettings: PromiseIExtendedResult = isExtendedResult
-            ? (promiseData as PromiseIExtendedResult)
-            : { message: promiseData };
+          const toastSettings: PromiseIExtendedResult = isExtendedResult ? promiseData : { message: promiseData };
 
           this.create({ id, type: 'error', description, ...toastSettings });
         } else if (response instanceof Error) {
@@ -177,11 +180,9 @@ class Observer {
           const description =
             typeof data.description === 'function' ? await data.description(response) : data.description;
 
-          const isExtendedResult = typeof promiseData === 'object' && !React.isValidElement(promiseData);
+          const isExtendedResult = typeof promiseData === 'object' && !isJSXElement(promiseData);
 
-          const toastSettings: PromiseIExtendedResult = isExtendedResult
-            ? (promiseData as PromiseIExtendedResult)
-            : { message: promiseData };
+          const toastSettings: PromiseIExtendedResult = isExtendedResult ? promiseData : { message: promiseData };
 
           this.create({ id, type: 'error', description, ...toastSettings });
         } else if (data.success !== undefined) {
@@ -191,16 +192,14 @@ class Observer {
           const description =
             typeof data.description === 'function' ? await data.description(response) : data.description;
 
-          const isExtendedResult = typeof promiseData === 'object' && !React.isValidElement(promiseData);
+          const isExtendedResult = typeof promiseData === 'object' && !isJSXElement(promiseData);
 
-          const toastSettings: PromiseIExtendedResult = isExtendedResult
-            ? (promiseData as PromiseIExtendedResult)
-            : { message: promiseData };
+          const toastSettings: PromiseIExtendedResult = isExtendedResult ? promiseData : { message: promiseData };
 
           this.create({ id, type: 'success', description, ...toastSettings });
         }
       })
-      .catch(async (error) => {
+      .catch(async (error: unknown) => {
         result = ['reject', error];
         if (data.error !== undefined) {
           shouldDismiss = false;
@@ -208,17 +207,15 @@ class Observer {
 
           const description = typeof data.description === 'function' ? await data.description(error) : data.description;
 
-          const isExtendedResult = typeof promiseData === 'object' && !React.isValidElement(promiseData);
+          const isExtendedResult = typeof promiseData === 'object' && !isJSXElement(promiseData);
 
-          const toastSettings: PromiseIExtendedResult = isExtendedResult
-            ? (promiseData as PromiseIExtendedResult)
-            : { message: promiseData };
+          const toastSettings: PromiseIExtendedResult = isExtendedResult ? promiseData : { message: promiseData };
 
           this.create({ id, type: 'error', description, ...toastSettings });
         }
       })
       .finally(() => {
-        if (shouldDismiss) {
+        if (id !== undefined && shouldDismiss) {
           // Toast is still in load state (and will be indefinitely — dismiss it)
           this.dismiss(id);
           id = undefined;
@@ -228,20 +225,24 @@ class Observer {
       });
 
     const unwrap = () =>
-      new Promise<ToastData>((resolve, reject) =>
-        originalPromise.then(() => (result[0] === 'reject' ? reject(result[1]) : resolve(result[1]))).catch(reject),
+      new Promise<ToastData>(
+        (resolve, reject) =>
+          void originalPromise
+            .then(() => {
+              if (result[0] === 'reject') {
+                reject(result[1] instanceof Error ? result[1] : new Error(String(result[1])));
+              } else {
+                resolve(result[1]);
+              }
+            })
+            .catch(reject),
       );
 
-    if (typeof id !== 'string' && typeof id !== 'number') {
-      // cannot Object.assign on undefined
-      return { unwrap };
-    } else {
-      return Object.assign(id, { unwrap });
-    }
+    return id ? Object.assign(id, { unwrap }) : { unwrap };
   };
 
-  custom = (jsx: (id: number | string) => React.ReactElement, data?: ExternalToast) => {
-    const id = data?.id || toastsCounter++;
+  custom = (jsx: (id: number | string) => JSX.Element, data?: ExternalToast) => {
+    const id = data?.id ?? toastsCounter++;
     this.create({ jsx: jsx(id), id, ...data });
     return id;
   };
@@ -255,7 +256,7 @@ export const ToastState = new Observer();
 
 // bind this to the toast function
 const toastFunction = (message: titleT, data?: ExternalToast) => {
-  const id = data?.id || toastsCounter++;
+  const id = data?.id ?? toastsCounter++;
 
   ToastState.addToast({
     title: message,
@@ -265,16 +266,16 @@ const toastFunction = (message: titleT, data?: ExternalToast) => {
   return id;
 };
 
-const isHttpResponse = (data: any): data is Response => {
-  return (
-    data &&
-    typeof data === 'object' &&
-    'ok' in data &&
-    typeof data.ok === 'boolean' &&
-    'status' in data &&
-    typeof data.status === 'number'
-  );
-};
+const isHttpResponse = (data: unknown): data is Response =>
+  !!data &&
+  typeof data === 'object' &&
+  'ok' in data &&
+  typeof data.ok === 'boolean' &&
+  'status' in data &&
+  typeof data.status === 'number';
+
+const isJSXElement = (value: unknown): value is JSX.Element =>
+  typeof value === 'function' || (typeof value === 'object' && value !== null && 'props' in value);
 
 const basicToast = toastFunction;
 

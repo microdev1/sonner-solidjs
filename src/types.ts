@@ -1,33 +1,30 @@
-import React from 'react';
+import { JSX, Setter } from 'solid-js';
 
 export type ToastTypes = 'normal' | 'action' | 'success' | 'info' | 'warning' | 'error' | 'loading' | 'default';
 
-export type PromiseT<Data = any> = Promise<Data> | (() => Promise<Data>);
+export type PromiseT<Data = unknown> = Promise<Data> | (() => Promise<Data>);
 
-export interface PromiseIExtendedResult extends ExternalToast {
-  message: React.ReactNode;
-}
+export type PromiseIExtendedResult = {
+  message: JSX.Element;
+} & ExternalToast;
 
-export type PromiseTExtendedResult<Data = any> =
+export type PromiseTExtendedResult<Data = unknown> =
   | PromiseIExtendedResult
   | ((data: Data) => PromiseIExtendedResult | Promise<PromiseIExtendedResult>);
 
-export type PromiseTResult<Data = any> =
-  | string
-  | React.ReactNode
-  | ((data: Data) => React.ReactNode | string | Promise<React.ReactNode | string>);
+export type PromiseTResult<Data = unknown> = JSX.Element | ((data: Data) => JSX.Element | Promise<JSX.Element>);
 
 export type PromiseExternalToast = Omit<ExternalToast, 'description'>;
 
-export type PromiseData<ToastData = any> = PromiseExternalToast & {
-  loading?: string | React.ReactNode;
+export type PromiseData<ToastData = unknown> = PromiseExternalToast & {
+  loading?: JSX.Element;
   success?: PromiseTResult<ToastData> | PromiseTExtendedResult<ToastData>;
   error?: PromiseTResult | PromiseTExtendedResult;
   description?: PromiseTResult;
   finally?: () => void | Promise<void>;
 };
 
-export interface ToastClassnames {
+export type ToastClassnames = {
   toast?: string;
   title?: string;
   description?: string;
@@ -35,82 +32,71 @@ export interface ToastClassnames {
   closeButton?: string;
   cancelButton?: string;
   actionButton?: string;
-  success?: string;
-  error?: string;
-  info?: string;
-  warning?: string;
-  loading?: string;
-  default?: string;
   content?: string;
   icon?: string;
-}
+} & Record<ToastTypes, string>;
 
-export interface ToastIcons {
-  success?: React.ReactNode;
-  info?: React.ReactNode;
-  warning?: React.ReactNode;
-  error?: React.ReactNode;
-  loading?: React.ReactNode;
-  close?: React.ReactNode;
-}
+export type ToastIcons = {
+  close?: JSX.Element;
+} & Record<ToastTypes, JSX.Element>;
 
-export interface Action {
-  label: React.ReactNode;
-  onClick: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
-  actionButtonStyle?: React.CSSProperties;
-}
+export type Action = {
+  label: JSX.Element;
+  onClick: (event: MouseEvent) => void;
+  actionButtonStyle?: JSX.CSSProperties;
+};
 
-export interface ToastT {
+export type ToastT = {
   id: number | string;
-  title?: (() => React.ReactNode) | React.ReactNode;
+  title?: JSX.Element;
   type?: ToastTypes;
-  icon?: React.ReactNode;
-  jsx?: React.ReactNode;
+  icon?: JSX.Element;
+  jsx?: JSX.Element;
   richColors?: boolean;
   invert?: boolean;
   closeButton?: boolean;
   dismissible?: boolean;
-  description?: (() => React.ReactNode) | React.ReactNode;
+  description?: JSX.Element;
   duration?: number;
   delete?: boolean;
-  action?: Action | React.ReactNode;
-  cancel?: Action | React.ReactNode;
+  action?: Action | JSX.Element;
+  cancel?: Action | JSX.Element;
   onDismiss?: (toast: ToastT) => void;
   onAutoClose?: (toast: ToastT) => void;
   promise?: PromiseT;
-  cancelButtonStyle?: React.CSSProperties;
-  actionButtonStyle?: React.CSSProperties;
-  style?: React.CSSProperties;
+  cancelButtonStyle?: JSX.CSSProperties;
+  actionButtonStyle?: JSX.CSSProperties;
+  style?: JSX.CSSProperties;
   unstyled?: boolean;
   className?: string;
   classNames?: ToastClassnames;
   descriptionClassName?: string;
   position?: Position;
-}
+};
 
-export function isAction(action: Action | React.ReactNode): action is Action {
-  return (action as Action).label !== undefined;
+export function isAction(action: Action | JSX.Element): action is Action {
+  return !!action && (action as Action).label !== undefined;
 }
 
 export type Position = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'top-center' | 'bottom-center';
-export interface HeightT {
+export type HeightT = {
   height: number;
   toastId: number | string;
   position: Position;
-}
+};
 
-interface ToastOptions {
+type ToastOptions = {
   className?: string;
   closeButton?: boolean;
   descriptionClassName?: string;
-  style?: React.CSSProperties;
-  cancelButtonStyle?: React.CSSProperties;
-  actionButtonStyle?: React.CSSProperties;
+  style?: JSX.CSSProperties;
+  cancelButtonStyle?: JSX.CSSProperties;
+  actionButtonStyle?: JSX.CSSProperties;
   duration?: number;
   unstyled?: boolean;
   classNames?: ToastClassnames;
   closeButtonAriaLabel?: string;
-}
+};
 
 type Offset =
   | {
@@ -122,7 +108,7 @@ type Offset =
   | string
   | number;
 
-export interface ToasterProps {
+export type ToasterProps = {
   invert?: boolean;
   theme?: 'light' | 'dark' | 'system';
   position?: Position;
@@ -135,18 +121,18 @@ export interface ToasterProps {
   closeButton?: boolean;
   toastOptions?: ToastOptions;
   className?: string;
-  style?: React.CSSProperties;
+  style?: JSX.CSSProperties;
   offset?: Offset;
   mobileOffset?: Offset;
   dir?: 'rtl' | 'ltr' | 'auto';
   swipeDirections?: SwipeDirection[];
   icons?: ToastIcons;
   containerAriaLabel?: string;
-}
+};
 
 export type SwipeDirection = 'top' | 'right' | 'bottom' | 'left';
 
-export interface ToastProps {
+export type ToastProps = {
   toast: ToastT;
   toasts: ToastT[];
   index: number;
@@ -154,7 +140,7 @@ export interface ToastProps {
   expanded: boolean;
   invert: boolean;
   heights: HeightT[];
-  setHeights: React.Dispatch<React.SetStateAction<HeightT[]>>;
+  setHeights: Setter<HeightT[]>;
   removeToast: (toast: ToastT) => void;
   gap?: number;
   position: Position;
@@ -162,19 +148,18 @@ export interface ToastProps {
   expandByDefault: boolean;
   closeButton: boolean;
   interacting: boolean;
-  style?: React.CSSProperties;
-  cancelButtonStyle?: React.CSSProperties;
-  actionButtonStyle?: React.CSSProperties;
+  style?: JSX.CSSProperties;
+  cancelButtonStyle?: JSX.CSSProperties;
+  actionButtonStyle?: JSX.CSSProperties;
   duration?: number;
-  className?: string;
+  class?: string;
   unstyled?: boolean;
   descriptionClassName?: string;
-  loadingIcon?: React.ReactNode;
   classNames?: ToastClassnames;
   icons?: ToastIcons;
   closeButtonAriaLabel?: string;
   defaultRichColors?: boolean;
-}
+};
 
 export enum SwipeStateTypes {
   SwipedOut = 'SwipedOut',
@@ -184,10 +169,10 @@ export enum SwipeStateTypes {
 
 export type Theme = 'light' | 'dark';
 
-export interface ToastToDismiss {
+export type ToastToDismiss = {
   id: number | string;
   dismiss: boolean;
-}
+};
 
 export type ExternalToast = Omit<ToastT, 'id' | 'type' | 'title' | 'jsx' | 'delete' | 'promise'> & {
   id?: number | string;
