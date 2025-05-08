@@ -1,4 +1,4 @@
-import { JSX, Setter } from 'solid-js';
+import { JSX } from 'solid-js';
 
 export type ToastTypes = 'normal' | 'action' | 'success' | 'info' | 'warning' | 'error' | 'loading' | 'default';
 
@@ -139,10 +139,8 @@ export type ToastProps = {
   swipeDirections?: SwipeDirection[];
   expanded: boolean;
   invert: boolean;
-  heights: HeightT[];
-  setHeights: Setter<HeightT[]>;
   removeToast: (toast: ToastT) => void;
-  gap?: number;
+  gap: number;
   position: Position;
   visibleToasts: number;
   expandByDefault: boolean;
